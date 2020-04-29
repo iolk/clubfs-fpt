@@ -1,5 +1,5 @@
 #!/bin/bash
-GRAPH_NODES=32
+GRAPH_NODES=20
 SEED_NUM=1111
 
 python3 gen.py $GRAPH_NODES $SEED_NUM > graph.gen

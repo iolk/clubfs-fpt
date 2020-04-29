@@ -5,6 +5,7 @@
 #include <bitset>
 #include <vector>
 #include <unordered_map>
+#include <algorithm>
 #include <unordered_set>
 #include <memory>
 
@@ -30,7 +31,7 @@ public:
 
 	void print(void);
 	bool canIterate(void);
-	ClusterSet nextSubset(void);
+	ClusterSet nextSubset(int);
 	ClusterSet subsetExcludingLast(void);
 	std::vector<int> activeSet(void);
 	uint64_t nodesNumber(void);
@@ -42,7 +43,10 @@ private:
 	int active_size;
 	uint64_t subset_counter;
 	bool can_iterate;
+
 	std::vector<int> active_set;
+	std::unordered_map<int, int> active_s2v_map;
+
 	std::shared_ptr<std::vector<int>> eta;
 	std::shared_ptr<std::vector<int>> v_set;
 	std::shared_ptr<std::unordered_set<int>> set;
