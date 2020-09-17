@@ -56,3 +56,4 @@
 /testcases/gen.in
 **/*.pdf
 oldmain.cpp
+**/*.gexf
