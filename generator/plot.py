@@ -32,7 +32,7 @@ cluster_labels = []
 nx.set_node_attributes(G, cluster_labels, 'cluster_label')
 
 for i, node in enumerate(G.nodes):
-	G.nodes[node]['cluster_label'] = labels[i]
+	G.nodes[node]['cluster_label'] = labels[i]+1
 
 # Gephi rappresentation
 nx.write_gexf(G, 'generator/plot.gexf')
@@ -48,4 +48,4 @@ for u, v in G.edges:
 for node in G.nodes:
 	file.write('%d %d\n' % (node, G.nodes[node]['cluster_label']))
 
-file.close() 
+file.close()

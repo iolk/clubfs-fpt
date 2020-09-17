@@ -232,10 +232,13 @@ int main(int argc, char *argv[])
 							j++;
 						}
 
-						s1_flags[j] = true;
-						s1_vec.push_back(s_vec_tmp[j]);
-						s1_eta += g.clusters[s_vec_tmp[j]].size();
-						s1_binary |= 1 << s_vec_tmp[j];
+						if (j < s1_flags.size())
+						{
+							s1_flags[j] = true;
+							s1_vec.push_back(s_vec_tmp[j]);
+							s1_eta += g.clusters[s_vec_tmp[j]].size();
+							s1_binary |= 1 << s_vec_tmp[j];
+						}
 					}
 				}
 
