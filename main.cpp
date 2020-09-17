@@ -193,14 +193,14 @@ int main(int argc, char *argv[])
 					// Vars init
 					s1_flags[0] = 1;
 					s1_vec.push_back(s_vec_tmp[0]);
-					u_int64_t s1_eta = g.clusters[s_vec_tmp[0]].size();
-					u_int64_t s1_binary = static_cast<uint64_t>(1) << s_vec_tmp[0];
+					uint64_t s1_eta = g.clusters[s_vec_tmp[0]].size();
+					uint64_t s1_binary = static_cast<uint64_t>(1) << s_vec_tmp[0];
 
 					// For each S' in S
 					for (uint64_t i = 1; i < s1_subset_size; i++)
 					{
 						int j = 0;
-						u_int64_t s_not_s1_binary = s_binary & ~s1_binary;
+						uint64_t s_not_s1_binary = s_binary & ~s1_binary;
 
 						// For each v in C | C subset of S'
 						for (int cluster : s1_vec)
