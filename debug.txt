@@ -1,0 +1,56 @@
+### BFS START ###
+start node: 0
+cluster: 0
+d(0, 0) = 0 
+cost: 0
+### BFS END ###
+### BFS START ###
+start node: 1
+cluster: 1
+d(1, 1) = 0 
+cost: 0
+### BFS END ###
+### BFS START ###
+start node: 2
+cluster: 2
+d(2, 2) = 0 
+cost: 0
+### BFS END ###
+### BFS START ###
+start node: 3
+cluster: 3
+d(3, 3) = 0 
+cost: 0
+### BFS END ###
+### BFS START ###
+start node: 4
+cluster: 4
+d(4, 4) = 0 
+cost: 0
+### BFS END ###
+### BFS START ###
+start node: 5
+cluster: 5
+d(5, 5) = 0 
+cost: 0
+### BFS END ###
+### BFS START ###
+start node: 6
+cluster: 6
+d(6, 6) = 0 
+cost: 0
+### BFS END ###
+### l(v, v') ###
+l(0, 1) = 1
+l(0, 4) = 1
+l(1, 0) = 1
+l(1, 2) = 1
+l(2, 1) = 1
+l(2, 3) = 1
+l(3, 2) = 1
+l(4, 0) = 1
+l(4, 5) = 1
+l(5, 4) = 1
+l(5, 6) = 1
+l(6, 5) = 1
+### OPT ###

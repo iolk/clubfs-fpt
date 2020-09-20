@@ -5,6 +5,7 @@
 #include <ios>
 #include <unordered_map>
 #include <unordered_set>
+#include <bitset>
 #include <list>
 #include <cstdint>
 #include <functional>
@@ -24,6 +25,8 @@ typedef struct
 	std::vector<std::unordered_set<int>> clusters;
 	std::vector<std::vector<uint64_t>> lvv;
 } ClusterGraph;
+
+void print_solution(uint64_t node, uint64_t subset, std::vector<std::vector<std::pair<uint64_t, uint64_t>>> PREV);
 
 /**
  * BFS_Vi[s]
@@ -74,6 +77,7 @@ int BFS_Vi(ClusterGraph &g, int s)
 int main(int argc, char *argv[])
 {
 	freopen("results.out", "w", stdout);
+	freopen("debug.txt", "w", stderr);
 	freopen(argv[1], "r", stdin);
 	std::ios_base::sync_with_stdio(false);
 
@@ -87,7 +91,7 @@ int main(int argc, char *argv[])
 	// 2^k
 	uint64_t k_subset_size = static_cast<uint64_t>(1) << k_size;
 
-	int start_node = 1;
+	int start_node = 0;
 
 	// GRAPH
 	ClusterGraph g;
@@ -96,10 +100,14 @@ int main(int argc, char *argv[])
 	std::vector<std::unordered_set<int>> clusters(k_size);
 	g.clusters = clusters;
 
-	// OPT[ V ][ s ];
+	// OPT[ V ][ S ]
 	std::vector<uint64_t>
 		uint_init(v_size, INFINITE);
 	std::vector<std::vector<uint64_t>> OPT(k_subset_size, uint_init);
+
+	// PREV[ V ][ S ] 
+	std::vector<std::pair<uint64_t, uint64_t>> uint_pair_init(v_size, std::make_pair (-1, -1));
+	std::vector<std::vector<std::pair<uint64_t, uint64_t>>> PREV(k_subset_size, uint_pair_init);
 
 	// l(v, v');
 	std::vector<std::vector<uint64_t>> lvv(v_size, uint_init);
@@ -218,6 +226,7 @@ int main(int argc, char *argv[])
 									if (tmp < min)
 									{
 										min = tmp;
+										PREV[s_binary][v_node] = std::make_pair(s1_binary, v1);
 									}
 								}
 							}
@@ -262,4 +271,46 @@ int main(int argc, char *argv[])
 
 	// Print the cost of CLUBFS from start_node
 	std::cout << OPT[k_subset_size - 1][start_node] << std::endl;
+	
+
+	// Debug print
+	LOG("### OPT ###\n");
+	std::cout <<"\t\t0\t1\t2\t3\t4\t5\t6"<< std::endl;
+	for (int i = 0; i < k_subset_size; i++)
+	{
+		std::cout <<std::bitset<4>(i)<<" |\t";
+		for (int j = 0; j < v_size; j++)
+		{
+			if (OPT[i][j] != INFINITE)
+			{
+				std::cout << OPT[i][j]<<"\t";
+			}else{
+				std::cout <<"I\t";
+			}
+		}
+		std::cout << std::endl;
+	}
+
+	
+	std::cout << std::endl << start_node << " "<<std::bitset<4>(k_subset_size - 1)<< std::endl;
+	print_solution(start_node, k_subset_size - 1, PREV);
+	
+}
+
+void print_solution(uint64_t node, uint64_t subset, std::vector<std::vector<std::pair<uint64_t, uint64_t>>> PREV){
+	std::cout <<"REC" << std::endl;
+	uint64_t s = PREV[subset][node].first;
+	uint64_t v = PREV[subset][node].second;
+	while(v!=-1 && s!=-1){
+		
+		std::cout << v << " "<< std::bitset<7>(s) << std::endl;
+
+		uint64_t not_s = subset & ~s;
+		if(PREV[not_s][node].first != -1)
+			print_solution(node, not_s, PREV);
+
+		subset = s;
+		s = PREV[subset][v].first;
+		v = PREV[subset][v].second;
+	}
 }
