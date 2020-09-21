@@ -40,4 +40,4 @@ for i, link in enumerate(res_body):
 	G.edges[u,v]['clustered_bfs'] = 1
 
 # Gephi rappresentation
-nx.write_gexf(G, 'generator/plot.gexf')
+nx.write_gexf(G, 'plot.gexf')

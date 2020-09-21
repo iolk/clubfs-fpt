@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <functional>
 
-#define INFINITE 10000000
+#define INFINITE 184467440737095516
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 
 typedef struct
@@ -48,9 +48,9 @@ int BFS_Vi(ClusterGraph &g, int s)
 	int i_cluster = g.graph[s].cluster;
 	int cost = 0;
 
-	LOG("### BFS START ###\n");
-	LOG("start node: %d\n", s);
-	LOG("cluster: %d\n", i_cluster);
+	// LOG("### BFS START ###\n");
+	// LOG("start node: %d\n", s);
+	// LOG("cluster: %d\n", i_cluster);
 
 	while (!queue.empty())
 	{
@@ -58,7 +58,7 @@ int BFS_Vi(ClusterGraph &g, int s)
 		queue.pop_front();
 		cost += visited[p] - 1;
 
-		LOG("d(%d, %d) = %d \n", s, p, visited[p] - 1);
+		// LOG("d(%d, %d) = %d \n", s, p, visited[p] - 1);
 
 		for (int q : g.graph[p].adj)
 		{
@@ -77,8 +77,8 @@ int BFS_Vi(ClusterGraph &g, int s)
 		}
 	}
 
-	LOG("cost: %d\n", cost);
-	LOG("### BFS END ###\n");
+	// LOG("cost: %d\n", cost);
+	// LOG("### BFS END ###\n");
 
 	return cost;
 }
@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
 	std::vector<std::vector<uint64_t>> OPT(k_subset_size, uint_init);
 
 	// PREV[ V ][ S ] 
-	std::vector<std::pair<uint64_t, uint64_t>> uint_pair_init(v_size, std::make_pair (-1, -1));
+	std::vector<std::pair<uint64_t, uint64_t>> uint_pair_init(v_size, std::make_pair (INFINITE, INFINITE));
 	std::vector<std::vector<std::pair<uint64_t, uint64_t>>> PREV(k_subset_size, uint_pair_init);
 
 	// η(S);
@@ -164,17 +164,17 @@ int main(int argc, char *argv[])
 	}
 
 	// Debug print
-	LOG("### l(v, v') ###\n");
-	for (int i = 0; i < v_size; i++)
-	{
-		for (int j = 0; j < v_size; j++)
-		{
-			if (g.lvv[i][j].distance != INFINITE)
-			{
-				LOG("l(%d, %d) = %d\n", i, j, (int)g.lvv[i][j].distance);
-			}
-		}
-	}
+	// LOG("### l(v, v') ###\n");
+	// for (int i = 0; i < v_size; i++)
+	// {
+	// 	for (int j = 0; j < v_size; j++)
+	// 	{
+	// 		if (g.lvv[i][j].distance != INFINITE)
+	// 		{
+	// 			LOG("l(%d, %d) = %d\n", i, j, (int)g.lvv[i][j].distance);
+	// 		}
+	// 	}
+	// }
 
 	std::vector<bool> s_flags(k_size);
 	std::vector<int> s_vec;
@@ -184,6 +184,8 @@ int main(int argc, char *argv[])
 	for (uint64_t s_binary = 0; s_binary < k_subset_size; s_binary++)
 	{
 		int ith_cluster = 0;
+
+		LOG("S: %d\n", s_binary);
 
 		// OPT of S with |S|=1 already calculated
 		if (number_of_clusters > 1)
@@ -299,7 +301,7 @@ void print_solution(uint64_t node, uint64_t subset, std::vector<std::vector<std:
 	uint64_t v = PREV[subset][node].second;
 	uint64_t from_node = node;
 
-	while(v!=-1 && s!=-1){
+	while(v!=INFINITE && s!=INFINITE){
 	
 		std::cout << g.lvv[from_node][v].link.first << " " << g.lvv[from_node][v].link.second << std::endl;
 		for(auto link: g.bfs_vi[v]){
@@ -308,7 +310,7 @@ void print_solution(uint64_t node, uint64_t subset, std::vector<std::vector<std:
 
 		uint64_t not_s = subset & ~s;
 		
-		if(PREV[not_s][from_node].first != -1)
+		if(PREV[not_s][from_node].first != INFINITE)
 			print_solution(from_node, not_s, PREV, g);
 
 		subset = s;

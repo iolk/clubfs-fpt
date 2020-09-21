@@ -4,9 +4,7 @@ from sklearn.cluster import SpectralClustering
 from sklearn.cluster import DBSCAN
 np.random.seed(1)
 
-# G = nx.read_edgelist('../testcases/datasets/as-data.txt')
-#G = nx.random_internet_as_graph(5000) troppi cluster
-# G = nx.erdos_renyi_graph(100,0.002) #onesto
+# G = nx.erdos_renyi_graph(100,0.002)
 #G = nx.connected_watts_strogatz_graph(200, 2, 0.4)
 # num_communities = 20
 # size_of_communities = 30
@@ -14,7 +12,9 @@ np.random.seed(1)
 
 num_of_clusters = 7
 
-G = nx.random_partition_graph([4,8,10,25,30,60,100], 0.6, 0.005, seed=42)
+G = nx.read_edgelist('datasets/as-data.txt')
+# G = nx.random_internet_as_graph(1000)
+# G = nx.random_partition_graph([200,100,330,250,90,160,100], 0.3, 0.005, seed=42)
 
 if not nx.is_connected(G):
 	largest_cc = max(nx.connected_components(G), key=len)
@@ -35,7 +35,7 @@ for i, node in enumerate(G.nodes):
 	G.nodes[node]['cluster_label'] = labels[i]+1
 
 # Gephi rappresentation
-nx.write_gexf(G, 'generator/plot.gexf')
+nx.write_gexf(G, 'plot.gexf')
 
 # Algoritm rappresentation
 file = open("testcases/generated.in",'w')
@@ -43,9 +43,9 @@ file = open("testcases/generated.in",'w')
 file.write('%d %d %d\n' % (len(G.nodes), len(G.edges), num_of_clusters))
 
 for u, v in G.edges:
-	file.write('%d %d\n' % (u, v))
+	file.write('%d %d\n' % (int(u), int(v)))
 
 for node in G.nodes:
-	file.write('%d %d\n' % (node, G.nodes[node]['cluster_label']))
+	file.write('%d %d\n' % (int(node), int(G.nodes[node]['cluster_label'])))
 
 file.close()
