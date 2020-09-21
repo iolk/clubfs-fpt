@@ -1,52 +1,48 @@
 import networkx as nx
-# import matplotlib.pyplot as plt
+import itertools
 
-# load the graph
-# G = nx.karate_club_graph()
-G = nx.random_internet_as_graph(1000)
+G = nx.random_internet_as_graph(500)
 
-# visualize the graph
-# nx.draw(G, with_labels = True)
+num_of_clusters = 10
 
-num_of_clusters = 8
+def girvan_newman(G, most_valuable_edge=None):
+    if G.number_of_edges() == 0:
+        yield tuple(nx.connected_components(G))
+        return
 
-def edge_to_remove(graph):
-	G_dict = nx.edge_betweenness_centrality(graph)
-	edge = ()
+    if most_valuable_edge is None:
+        def most_valuable_edge(G):
+            betweenness = nx.edge_betweenness_centrality(G)
+            return max(betweenness, key=betweenness.get)
 
-	# extract the edge with highest edge betweenness centrality score
-	for key, value in sorted(G_dict.items(), key=lambda item: item[1], reverse = True):
-		edge = key
-		break
+    g = G.copy().to_undirected()
+    g.remove_edges_from(nx.selfloop_edges(g))
+    while g.number_of_edges() > 0:
+        yield _without_most_central_edges(g, most_valuable_edge)
 
-	return edge
+def _without_most_central_edges(G, most_valuable_edge):
+    original_num_components = nx.number_connected_components(G)
+    num_new_components = original_num_components
+    while num_new_components <= original_num_components:
+        edge = most_valuable_edge(G)
+        G.remove_edge(*edge)
+        new_components = tuple(nx.connected_components(G))
+        num_new_components = len(new_components)
+    return new_components
 
-def girvan_newman(graph):
-	# find number of connected components
-	sg = nx.connected_components(graph)
-	sg_count = nx.number_connected_components(graph)
-
-	while(sg_count != num_of_clusters):
-		graph.remove_edge(edge_to_remove(graph)[0], edge_to_remove(graph)[1])
-		sg = nx.connected_components(graph)
-		sg_count = nx.number_connected_components(graph)
-		print(sg_count)
-
-	return sg
-
-# find communities in the graph
-c = girvan_newman(G.copy())
-
-# find the nodes forming the communities
-node_groups = []
-
-for i in c:
-	node_groups.append(list(i))
+comp = girvan_newman(G)
+limited = itertools.takewhile(lambda c: len(c) <= num_of_clusters, comp)
+communities = ''
+for tmp in limited:
+	# print(tuple(sorted(c) for c in communities))
+	print(len(tmp))
+	if(len(tmp) == num_of_clusters):
+		communities = tmp
 
 cluster_labels = []
 nx.set_node_attributes(G, cluster_labels, 'cluster_label')
 
-for i, clust in enumerate(node_groups):
+for i, clust in enumerate(communities):
 	for j, node in enumerate(clust):
 		G.nodes[node]['cluster_label'] = i+1
 
