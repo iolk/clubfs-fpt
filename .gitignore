@@ -54,6 +54,7 @@
 /generator/graph.*
 !/testcases/*.out
 /testcases/gen.in
+/testcases/gen*.in
 **/*.pdf
 oldmain.cpp
 **/*.gexf
