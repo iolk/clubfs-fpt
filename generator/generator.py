@@ -14,7 +14,7 @@ np.random.seed(1)
 
 num_of_clusters = 7
 
-G = nx.random_partition_graph([4,8,10,25,30,60,100], 0.6, 0.02,seed=42)
+G = nx.random_partition_graph([4,8,10,25,30,60,100], 0.6, 0.005, seed=42)
 
 if not nx.is_connected(G):
 	largest_cc = max(nx.connected_components(G), key=len)

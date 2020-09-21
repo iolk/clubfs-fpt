@@ -21,12 +21,19 @@ typedef struct
 
 typedef struct
 {
+	uint64_t distance;
+	std::pair<int,int> link;
+} lvv_data;
+
+typedef struct
+{
 	std::unordered_map<int, node_data> graph;
 	std::vector<std::unordered_set<int>> clusters;
-	std::vector<std::vector<uint64_t>> lvv;
+	std::vector<std::vector<std::pair<int,int>>> bfs_vi;
+	std::vector<std::vector<lvv_data>> lvv;
 } ClusterGraph;
 
-void print_solution(uint64_t node, uint64_t subset, std::vector<std::vector<std::pair<uint64_t, uint64_t>>> PREV);
+void print_solution(uint64_t node, uint64_t subset, std::vector<std::vector<std::pair<uint64_t, uint64_t>>> PREV, ClusterGraph g);
 
 /**
  * BFS_Vi[s]
@@ -35,7 +42,7 @@ int BFS_Vi(ClusterGraph &g, int s)
 {
 	std::vector<int> visited((int)g.graph.size());
 	std::list<int> queue;
-
+	
 	queue.push_back(s);
 	visited[s] = 1;
 	int i_cluster = g.graph[s].cluster;
@@ -55,14 +62,16 @@ int BFS_Vi(ClusterGraph &g, int s)
 
 		for (int q : g.graph[p].adj)
 		{
-			if (g.graph[q].cluster != i_cluster && g.lvv[s][q] == INFINITE)
+			if (g.graph[q].cluster != i_cluster && g.lvv[s][q].distance == INFINITE)
 			{
-				g.lvv[s][q] = visited[p];
+				g.lvv[s][q].distance = visited[p];
+				g.lvv[s][q].link = std::make_pair(p, q);
 			}
 
 			if (!visited[q] && g.graph[q].cluster == i_cluster)
 			{
 				visited[q] = visited[p] + 1;
+				g.bfs_vi[s].push_back(std::make_pair(p, q));
 				queue.push_back(q);
 			}
 		}
@@ -100,18 +109,24 @@ int main(int argc, char *argv[])
 	std::vector<std::unordered_set<int>> clusters(k_size);
 	g.clusters = clusters;
 
+	// BFS_Vi
+	std::vector<std::vector<std::pair<int, int>>> bfs_vi_init(v_size);
+	g.bfs_vi = bfs_vi_init;
+
+	// l(v, v');
+	lvv_data lvv_data_init;
+	lvv_data_init.distance = INFINITE;
+	std::vector<lvv_data> lvv_init(v_size, lvv_data_init);
+	std::vector<std::vector<lvv_data>> lvv(v_size, lvv_init);
+	g.lvv = lvv;
+
 	// OPT[ V ][ S ]
-	std::vector<uint64_t>
-		uint_init(v_size, INFINITE);
+	std::vector<uint64_t> uint_init(v_size, INFINITE);
 	std::vector<std::vector<uint64_t>> OPT(k_subset_size, uint_init);
 
 	// PREV[ V ][ S ] 
 	std::vector<std::pair<uint64_t, uint64_t>> uint_pair_init(v_size, std::make_pair (-1, -1));
 	std::vector<std::vector<std::pair<uint64_t, uint64_t>>> PREV(k_subset_size, uint_pair_init);
-
-	// l(v, v');
-	std::vector<std::vector<uint64_t>> lvv(v_size, uint_init);
-	g.lvv = lvv;
 
 	// η(S);
 	std::vector<int> eta(k_subset_size);
@@ -154,9 +169,9 @@ int main(int argc, char *argv[])
 	{
 		for (int j = 0; j < v_size; j++)
 		{
-			if (g.lvv[i][j] != INFINITE)
+			if (g.lvv[i][j].distance != INFINITE)
 			{
-				LOG("l(%d, %d) = %d\n", i, j, (int)g.lvv[i][j]);
+				LOG("l(%d, %d) = %d\n", i, j, (int)g.lvv[i][j].distance);
 			}
 		}
 	}
@@ -216,12 +231,12 @@ int main(int argc, char *argv[])
 							for (int v1 : g.clusters[cluster])
 							{
 								uint64_t tmp = INFINITE;
-								if (g.lvv[v_node][v1] != INFINITE &&
+								if (g.lvv[v_node][v1].distance != INFINITE &&
 									OPT[s1_binary][v1] != INFINITE &&
 									OPT[s_not_s1_binary][v_node] != INFINITE)
 								{
 									// l(v, v')η(S') + OPT[v', S'] + OPT[v, S \ S']
-									tmp = g.lvv[v_node][v1] * s1_eta + OPT[s1_binary][v1] + OPT[s_not_s1_binary][v_node];
+									tmp = g.lvv[v_node][v1].distance * s1_eta + OPT[s1_binary][v1] + OPT[s_not_s1_binary][v_node];
 
 									if (tmp < min)
 									{
@@ -270,46 +285,34 @@ int main(int argc, char *argv[])
 	}
 
 	// Print the cost of CLUBFS from start_node
-	std::cout << OPT[k_subset_size - 1][start_node] << std::endl;
+	// std::cout << OPT[k_subset_size - 1][start_node] << std::endl;
 	
-
-	// Debug print
-	LOG("### OPT ###\n");
-	std::cout <<"\t\t0\t1\t2\t3\t4\t5\t6"<< std::endl;
-	for (int i = 0; i < k_subset_size; i++)
-	{
-		std::cout <<std::bitset<4>(i)<<" |\t";
-		for (int j = 0; j < v_size; j++)
-		{
-			if (OPT[i][j] != INFINITE)
-			{
-				std::cout << OPT[i][j]<<"\t";
-			}else{
-				std::cout <<"I\t";
-			}
-		}
-		std::cout << std::endl;
+	for(auto link: g.bfs_vi[start_node]){
+		std::cout << link.first << " " << link.second << std::endl;
 	}
-
-	
-	std::cout << std::endl << start_node << " "<<std::bitset<4>(k_subset_size - 1)<< std::endl;
-	print_solution(start_node, k_subset_size - 1, PREV);
+	print_solution(start_node, k_subset_size - 1, PREV, g);
 	
 }
 
-void print_solution(uint64_t node, uint64_t subset, std::vector<std::vector<std::pair<uint64_t, uint64_t>>> PREV){
-	std::cout <<"REC" << std::endl;
+void print_solution(uint64_t node, uint64_t subset, std::vector<std::vector<std::pair<uint64_t, uint64_t>>> PREV, ClusterGraph g){
 	uint64_t s = PREV[subset][node].first;
 	uint64_t v = PREV[subset][node].second;
+	uint64_t from_node = node;
+
 	while(v!=-1 && s!=-1){
-		
-		std::cout << v << " "<< std::bitset<7>(s) << std::endl;
+	
+		std::cout << g.lvv[from_node][v].link.first << " " << g.lvv[from_node][v].link.second << std::endl;
+		for(auto link: g.bfs_vi[v]){
+			std::cout << link.first << " " << link.second << std::endl;
+		}
 
 		uint64_t not_s = subset & ~s;
-		if(PREV[not_s][node].first != -1)
-			print_solution(node, not_s, PREV);
+		
+		if(PREV[not_s][from_node].first != -1)
+			print_solution(from_node, not_s, PREV, g);
 
 		subset = s;
+		from_node = v;
 		s = PREV[subset][v].first;
 		v = PREV[subset][v].second;
 	}
