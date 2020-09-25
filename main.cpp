@@ -97,6 +97,7 @@ int main(int argc, char *argv[])
 	if (k_size > 63)
 		return -1;
 
+	std::cout<<"1"<<std::endl;
 	// 2^k
 	uint64_t k_subset_size = static_cast<uint64_t>(1) << k_size;
 
@@ -105,13 +106,16 @@ int main(int argc, char *argv[])
 	// GRAPH
 	ClusterGraph g;
 
+	std::cout<<"2"<<std::endl;
 	// CLUSTERS
 	std::vector<std::unordered_set<int>> clusters(k_size);
 	g.clusters = clusters;
 
+	std::cout<<"3"<<std::endl;
 	// BFS_Vi
 	std::vector<std::vector<std::pair<int, int>>> bfs_vi_init(v_size);
 	g.bfs_vi = bfs_vi_init;
+	std::cout<<"4"<<std::endl;
 
 	// l(v, v');
 	lvv_data lvv_data_init;
@@ -120,17 +124,21 @@ int main(int argc, char *argv[])
 	std::vector<std::vector<lvv_data>> lvv(v_size, lvv_init);
 	g.lvv = lvv;
 
+	std::cout<<"5"<<std::endl;
 	// OPT[ V ][ S ]
 	std::vector<uint64_t> uint_init(v_size, INFINITE);
 	std::vector<std::vector<uint64_t>> OPT(k_subset_size, uint_init);
 
+	std::cout<<"6"<<std::endl;
 	// PREV[ V ][ S ] 
 	std::vector<std::pair<uint64_t, uint64_t>> uint_pair_init(v_size, std::make_pair (INFINITE, INFINITE));
 	std::vector<std::vector<std::pair<uint64_t, uint64_t>>> PREV(k_subset_size, uint_pair_init);
 
+	std::cout<<"7"<<std::endl;
 	// η(S);
 	std::vector<int> eta(k_subset_size);
 
+	std::cout<<"8"<<std::endl;
 	for (int i = 0; i < m_size; i++)
 	{
 		int v, u;
