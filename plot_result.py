@@ -1,8 +1,9 @@
 import numpy as np
 import networkx as nx
+import sys
 np.random.seed(1)
 
-with open('testcases/generated.in','r') as f:
+with open(sys.argv[1],'r') as f:
 	in_body = f.read().split('\n')
 	in_body.pop()
 	f.close()

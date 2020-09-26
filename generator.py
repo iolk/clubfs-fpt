@@ -3,33 +3,73 @@ import networkx as nx
 from sklearn.cluster import SpectralClustering
 import argparse
 
-my_parser = argparse.ArgumentParser(description='Graph generator for clubfs')
+def edge_to_remove(graph):
+	G_dict = nx.edge_betweenness_centrality(graph)
+	edge = ()
+
+	# extract the edge with highest edge betweenness centrality score
+	for key, value in sorted(G_dict.items(), key=lambda item: item[1], reverse = True):
+		edge = key
+		break
+
+	return edge
+
+def girvan_newman(graph):
+	# find number of connected components
+	sg = nx.connected_components(graph)
+	sg_count = nx.number_connected_components(graph)
+
+	while(sg_count != num_of_clusters):
+		graph.remove_edge(edge_to_remove(graph)[0], edge_to_remove(graph)[1])
+		sg = nx.connected_components(graph)
+		sg_count = nx.number_connected_components(graph)
+
+	return sg
+
+parser = argparse.ArgumentParser(description='Graph generator for clubfs')
 
 # Optional params
-my_parser.add_argument('--seed', action='store', type=int)
+parser.add_argument('--seed', action='store', type=int)
 
 # Required params
-my_parser.add_argument('path', metavar='path', type=str, help='the name of the file')
-my_parser.add_argument('-k', action='store', type=int, help='Number of cluster', required=True)
+parser.add_argument('file_name', metavar='file_name', type=str, help='Name of the file')
+parser.add_argument('-k', action='store', type=int, help='Number of cluster', required=True)
 
 # Clustering options
-my_parser.add_argument('-sc', '--spectral-clustering', action='store_true', help='Use spectral clustering, this will used by default')
-my_parser.add_argument('-gn', '--girvan-newman',action='store_true', help='Use girvan newman')
+parser.add_argument('-clu', '--clustering', action='store', nargs=1, type=str, default=['spectral'], choices=['spectral', 'girvan-newman'], help='Clustering algorithm (default: spectral)')
 
 # Graph generator options
-my_parser.add_argument('-part', '--partition-graph',action='store_true', help='Generates a random partition graph, this will used by default')
-my_parser.add_argument('-er', '--erdos-renyi', action='store_true', help='Generates a random Erdos Renyi graph')
-my_parser.add_argument('-as', '--internet-as',action='store_true', help='Generates a random Internet AS graph')
+parser.add_argument('-gen', '--generation', action='store', nargs=1, type=str, default=['partition'], choices=['partition', 'internet-as'], help='Generation algorithm (default: partition)')
 
-args = my_parser.parse_args()
-print(vars(args))
+parser.add_argument('-c', '--communities', action='store', nargs='+', type=int, help='Parameter for Partition Graph, list of cardinalities of communities')
+parser.add_argument('-p_in', action='store', type=float, help='Parameter for Partition Graph, probability of edges in the community')
+parser.add_argument('-p_out', action='store', type=float, help='Parameter for Partition Graph, probability of edges between community')
 
-SEED = 1111 if args.seed == None else args.seed
+parser.add_argument('-n', action='store', type=int, help='Parameter for Internet AS Graph, Number of nodes')
+
+# parser.add_argument('-er', '--erdos-renyi', action='store_true', help='Generates a random Erdos Renyi graph')
+
+args = parser.parse_args()
+
+# Argument check
+if args.generation[0] == 'partition' and (args.communities is None or args.p_in is None or args.p_out is None):
+	parser.error("Partition Graph requires --communities, -p_in and -p_out.")
+
+if args.generation[0] == 'internet-as' and args.n is None:
+	parser.error("Internet AS Graph requires -n.")
+
+SEED = 1111 if args.seed is None else args.seed
 np.random.seed(SEED)
 
-G = nx.erdos_renyi_graph(100,0.002)
-G = nx.random_internet_as_graph(1000)
-G = nx.random_partition_graph([200,100,330,250,90,160,100], 0.3, 0.005, seed=SEED)
+# Random Internet AS Graph
+if args.generation[0] == 'internet-as': 
+	G = nx.random_internet_as_graph(args.n)
+
+# Random Partition Graph
+if args.generation[0] == 'partition': 
+	G = nx.random_partition_graph(args.communities, args.p_in, args.p_out, seed=SEED)
+
+# G = nx.erdos_renyi_graph(100,0.002)
 
 if not nx.is_connected(G):
 	largest_cc = max(nx.connected_components(G), key=len)
@@ -39,34 +79,43 @@ adj_mat = nx.to_numpy_matrix(G)
 
 num_of_clusters = args.k
 
-# # SpectralClustering
-# sc = SpectralClustering(num_of_clusters, affinity='precomputed', n_init=100, assign_labels='discretize')
+# SpectralClustering
+if args.clustering[0] == 'spectral':
+	sc = SpectralClustering(num_of_clusters, affinity='precomputed', n_init=100, assign_labels='discretize')
 
+	sc.fit(adj_mat)
+	labels = sc.labels_
 
+	cluster_labels = []
+	nx.set_node_attributes(G, cluster_labels, 'cluster_label')
 
+	for i, node in enumerate(G.nodes):
+		G.nodes[node]['cluster_label'] = labels[i]+1
 
-# sc.fit(adj_mat)
+# Girvan-Newman
+if args.clustering[0] == 'girvan-newman':
+	c = girvan_newman(G.copy())
 
-# labels = sc.labels_
+	communities = []
+	for i in c:
+		communities.append(list(i))
+		
+	for i, clust in enumerate(communities):
+		for j, node in enumerate(clust):
+			G.nodes[node]['cluster_label'] = i+1
 
-# cluster_labels = []
-# nx.set_node_attributes(G, cluster_labels, 'cluster_label')
+# Gephi rappresentation
+nx.write_gexf(G, 'gen_'+args.file_name+'_plot.gexf')
 
-# for i, node in enumerate(G.nodes):
-# 	G.nodes[node]['cluster_label'] = labels[i]+1
+# Algoritm rappresentation
+file = open('testcases/gen_'+ args.file_name+'.in','w')
 
-# # Gephi rappresentation
-# nx.write_gexf(G, 'plot.gexf')
+file.write('%d %d %d\n' % (len(G.nodes), len(G.edges), num_of_clusters))
 
-# # Algoritm rappresentation
-# file = open("testcases/generated.in",'w')
+for u, v in G.edges:
+	file.write('%d %d\n' % (int(u), int(v)))
 
-# file.write('%d %d %d\n' % (len(G.nodes), len(G.edges), num_of_clusters))
+for node in G.nodes:
+	file.write('%d %d\n' % (int(node), int(G.nodes[node]['cluster_label'])))
 
-# for u, v in G.edges:
-# 	file.write('%d %d\n' % (int(u), int(v)))
-
-# for node in G.nodes:
-# 	file.write('%d %d\n' % (int(node), int(G.nodes[node]['cluster_label'])))
-
-# file.close()
+file.close()

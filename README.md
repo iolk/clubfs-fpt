@@ -3,15 +3,20 @@
 ```bash
 g++ -std=c++17 -Wall -pedantic -O3 main.cpp -o main
 ```
-
-### Run
-
-```bash
-./main testcases/16x4.in &>debug.out
-```
+or 
+`CTRL+SHIFT+B` on VS Code on Windows (check mingw path)
 
 ### Generating
 
 ```bash
-cd generator && ./gen.sh NUMBER_OF_NODES && cd ..
+generator.py [OPTIONS] file_name
+```
+see `generator.py -h` for all options
+
+### Run
+
+```bash
+main testcases/gen_FILE_NAME.in
+plot_result testcases/gen_FILE_NAME.in
+plot.gexf
 ```
