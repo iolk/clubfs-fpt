@@ -57,7 +57,7 @@ int BFS_Vi(ClusterGraph &g, int s)
 		int p = queue.front();
 		queue.pop_front();
 		cost += visited[p] - 1;
-
+		
 		// LOG("d(%d, %d) = %d \n", s, p, visited[p] - 1);
 
 		for (int q : g.graph[p].adj)
@@ -105,13 +105,17 @@ int main(int argc, char *argv[])
 	// GRAPH
 	ClusterGraph g;
 
+	// std::cout<<"1"<<std::endl;
+
 	// CLUSTERS
 	std::vector<std::unordered_set<int>> clusters(k_size);
 	g.clusters = clusters;
+	// std::cout<<"1"<<std::endl;
 
 	// BFS_Vi
 	std::vector<std::vector<std::pair<int, int>>> bfs_vi_init(v_size);
 	g.bfs_vi = bfs_vi_init;
+	// std::cout<<"1"<<std::endl;
 
 	// l(v, v');
 	lvv_data lvv_data_init;
@@ -128,9 +132,11 @@ int main(int argc, char *argv[])
 	std::vector<std::pair<uint64_t, uint64_t>> uint_pair_init(v_size, std::make_pair (INFINITE, INFINITE));
 	std::vector<std::vector<std::pair<uint64_t, uint64_t>>> PREV(k_subset_size, uint_pair_init);
 
+	// std::cout<<"1"<<std::endl;
 	// η(S);
 	std::vector<int> eta(k_subset_size);
 
+	// std::cout<<"5"<<std::endl;
 	for (int i = 0; i < m_size; i++)
 	{
 		int v, u;
@@ -140,6 +146,7 @@ int main(int argc, char *argv[])
 		g.graph[u].adj.insert(v);
 	}
 
+	// std::cout<<"6"<<std::endl;
 	for (int i = 0; i < v_size; i++)
 	{
 		int v, cluster;
@@ -153,6 +160,7 @@ int main(int argc, char *argv[])
 
 		eta[1 << cluster]++;
 	}
+	// std::cout<<"7"<<std::endl;
 
 	// Calculate BFS of Vi for each node of Vi
 	for (uint64_t i = 1, j = 0; i < k_subset_size; i <<= 1, j++)
@@ -162,6 +170,7 @@ int main(int argc, char *argv[])
 			OPT[i][v] = BFS_Vi(g, v);
 		}
 	}
+	// std::cout<<"8"<<std::endl;
 
 	// Debug print
 	// LOG("### l(v, v') ###\n");
@@ -180,6 +189,7 @@ int main(int argc, char *argv[])
 	std::vector<int> s_vec;
 	int number_of_clusters = 0;
 
+	// std::cout<<"9"<<std::endl;
 	// For each subset S in V
 	for (uint64_t s_binary = 0; s_binary < k_subset_size; s_binary++)
 	{
@@ -285,6 +295,28 @@ int main(int argc, char *argv[])
 		s_vec.push_back(ith_cluster);
 		number_of_clusters++;
 	}
+
+	// Debug print
+	// std::cout <<"\t\t";
+	// for (int i = 0; i < v_size; i++)
+	// {
+	// 	std::cout <<i<<"\t";
+	// }
+	// std::cout<< std::endl;
+	// for (int i = 0; i < k_subset_size; i++)
+	// {
+	// 	std::cout <<std::bitset<7>(i)<<" |\t";
+	// 	for (int j = 0; j < v_size; j++)
+	// 	{
+	// 		if (OPT[i][j] != INFINITE)
+	// 		{
+	// 			std::cout << OPT[i][j]<<"\t";
+	// 		}else{
+	// 			std::cout <<"I\t";
+	// 		}
+	// 	}
+	// 	std::cout << std::endl;
+	// }
 
 	// Print the cost of CLUBFS from start_node
 	// std::cout << OPT[k_subset_size - 1][start_node] << std::endl;

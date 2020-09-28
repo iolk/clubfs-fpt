@@ -1,5 +1,6 @@
 import numpy as np
 import networkx as nx
+from cdlib import algorithms
 from sklearn.cluster import SpectralClustering
 import argparse
 
@@ -33,33 +34,72 @@ parser.add_argument('--seed', action='store', type=int)
 
 # Required params
 parser.add_argument('file_name', metavar='file_name', type=str, help='Name of the file')
-parser.add_argument('-k', action='store', type=int, help='Number of cluster', required=True)
 
 # Clustering options
-parser.add_argument('-clu', '--clustering', action='store', nargs=1, type=str, default=['spectral'], choices=['spectral', 'girvan-newman'], help='Clustering algorithm (default: spectral)')
+parser.add_argument('-clu', '--clustering', action='store', nargs=1, type=str, default=['spectral'], choices=['louvain','infomap','spectral', 'girvan-newman'], help='Clustering algorithm (default: spectral)')
 
 # Graph generator options
-parser.add_argument('-gen', '--generation', action='store', nargs=1, type=str, default=['partition'], choices=['partition', 'internet-as'], help='Generation algorithm (default: partition)')
+parser.add_argument('-gen', '--generation', action='store', nargs=1, type=str, default=['lfr-benchmark'], choices=['file','lfr-benchmark','partition', 'internet-as'], help='Generation algorithm (default: partition)')
+
+parser.add_argument('--file-path', action='store', type=str, help='')
+
+parser.add_argument('-t1', action='store', type=float, help='Parameter for LFR benchmark')
+parser.add_argument('-t2', action='store', type=float, help='Parameter for LFR benchmark')
+parser.add_argument('-mu', action='store', type=float, help='Parameter for LFR benchmark')
+parser.add_argument('-avg_degree', action='store', type=float, help='Parameter for LFR benchmark')
+parser.add_argument('-min_degree', action='store', type=float, help='Parameter for LFR benchmark')
+parser.add_argument('-min_community', action='store', type=float, help='Parameter for LFR benchmark')
+
 
 parser.add_argument('-c', '--communities', action='store', nargs='+', type=int, help='Parameter for Partition Graph, list of cardinalities of communities')
 parser.add_argument('-p_in', action='store', type=float, help='Parameter for Partition Graph, probability of edges in the community')
 parser.add_argument('-p_out', action='store', type=float, help='Parameter for Partition Graph, probability of edges between community')
 
 parser.add_argument('-n', action='store', type=int, help='Parameter for Internet AS Graph, Number of nodes')
+parser.add_argument('-k', action='store', type=int, help='Number of cluster')
 
 # parser.add_argument('-er', '--erdos-renyi', action='store_true', help='Generates a random Erdos Renyi graph')
 
 args = parser.parse_args()
 
 # Argument check
-if args.generation[0] == 'partition' and (args.communities is None or args.p_in is None or args.p_out is None):
+if args.generation[0] == 'lfr-benchmark' and (args.n is None or args.t1 is None or args.t2 is None or args.mu is None or args.min_community is None or (args.avg_degree is None and args.min_degree is None)):
 	parser.error("Partition Graph requires --communities, -p_in and -p_out.")
 
-if args.generation[0] == 'internet-as' and args.n is None:
+if args.generation[0] == 'partition' and (args.communities is None or args.p_in is None or args.p_out is None or args.k is None):
+	parser.error("Partition Graph requires --communities, -p_in and -p_out.")
+
+if args.generation[0] == 'internet-as' and (args.n is None or args.k is None):
 	parser.error("Internet AS Graph requires -n.")
 
-SEED = 1111 if args.seed is None else args.seed
+SEED = 14957 if args.seed is None else args.seed
 np.random.seed(SEED)
+
+cluster_number = 1
+
+# LFR Benchmark Graph
+if args.generation[0] == 'lfr-benchmark': 
+	G = nx.LFR_benchmark_graph(args.n, args.t1, args.t2 , args.mu, average_degree=args.avg_degree, min_community=args.min_community, seed=SEED)
+
+	H = G.__class__()
+	H.add_nodes_from(G)
+	H.add_edges_from(G.edges)
+
+	cluster_labels = None
+	nx.set_node_attributes(H, cluster_labels, 'cluster_label')
+
+	for (node, nodedata) in G.nodes.items():
+		if H.nodes[node]['cluster_label'] is None:
+			H.nodes[node]['cluster_label'] = cluster_number
+			# print(nodedata)
+
+			for i in nodedata['community']:
+				H.nodes[i]['cluster_label'] = cluster_number
+
+			cluster_number+=1
+	
+	G = H.copy()
+
 
 # Random Internet AS Graph
 if args.generation[0] == 'internet-as': 
@@ -69,40 +109,68 @@ if args.generation[0] == 'internet-as':
 if args.generation[0] == 'partition': 
 	G = nx.random_partition_graph(args.communities, args.p_in, args.p_out, seed=SEED)
 
-# G = nx.erdos_renyi_graph(100,0.002)
+if args.generation[0] == 'file': 
+	G = nx.Graph()
 
-if not nx.is_connected(G):
-	largest_cc = max(nx.connected_components(G), key=len)
-	G = G.subgraph(largest_cc).copy()
+	with open(args.file_path,'r') as f:
+		res_body = f.read().split('\n')
+		res_body.pop()
+		f.close()
 
-adj_mat = nx.to_numpy_matrix(G)
+	for i, link in enumerate(res_body):
+		u = link.split()[0]
+		v = link.split()[1]
+		G.add_edge(u, v)
 
-num_of_clusters = args.k
 
-# SpectralClustering
-if args.clustering[0] == 'spectral':
-	sc = SpectralClustering(num_of_clusters, affinity='precomputed', n_init=100, assign_labels='discretize')
+num_of_clusters = args.k if args.generation[0] != 'lfr-benchmark' else cluster_number-1
 
-	sc.fit(adj_mat)
-	labels = sc.labels_
+if args.generation[0] != 'lfr-benchmark':
+	if not nx.is_connected(G):
+		largest_cc = max(nx.connected_components(G), key=len)
+		G = G.subgraph(largest_cc).copy()
 
-	cluster_labels = []
-	nx.set_node_attributes(G, cluster_labels, 'cluster_label')
+	adj_mat = nx.to_numpy_matrix(G)
 
-	for i, node in enumerate(G.nodes):
-		G.nodes[node]['cluster_label'] = labels[i]+1
+	# SpectralClustering
+	if args.clustering[0] == 'infomap':
+		im = algorithms.infomap(G)
+		print(im)
 
-# Girvan-Newman
-if args.clustering[0] == 'girvan-newman':
-	c = girvan_newman(G.copy())
+	if args.clustering[0] == 'louvain':
+		im = algorithms.louvain(G)
+		print(im.to_node_community_map())
 
-	communities = []
-	for i in c:
-		communities.append(list(i))
-		
-	for i, clust in enumerate(communities):
-		for j, node in enumerate(clust):
-			G.nodes[node]['cluster_label'] = i+1
+
+	# SpectralClustering
+	if args.clustering[0] == 'spectral':
+		sc = SpectralClustering(num_of_clusters, affinity='precomputed', n_init=100, assign_labels='discretize')
+
+		sc.fit(adj_mat)
+		labels = sc.labels_
+
+		cluster_labels = []
+		nx.set_node_attributes(G, cluster_labels, 'cluster_label')
+
+		for i, node in enumerate(G.nodes):
+			G.nodes[node]['cluster_label'] = labels[i]+1
+
+	# Girvan-Newman
+	if args.clustering[0] == 'girvan-newman':
+		c = girvan_newman(G.copy())
+
+		communities = []
+		for i in c:
+			communities.append(list(i))
+			
+		for i, clust in enumerate(communities):
+			for j, node in enumerate(clust):
+				G.nodes[node]['cluster_label'] = i+1
+
+
+# for (node, nodedata) in G.nodes.items():
+# 	print(node)
+# 	print(nodedata)
 
 # Gephi rappresentation
 nx.write_gexf(G, 'gen_'+args.file_name+'_plot.gexf')
