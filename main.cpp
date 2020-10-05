@@ -27,7 +27,7 @@ typedef struct
 
 typedef struct
 {
-	std::unordered_map<int, node_data> graph;
+	std::vector<node_data> graph;
 	std::vector<std::unordered_set<int>> clusters;
 	std::vector<std::vector<std::pair<int,int>>> bfs_vi;
 	std::vector<std::vector<lvv_data>> lvv;
@@ -105,17 +105,17 @@ int main(int argc, char *argv[])
 	// GRAPH
 	ClusterGraph g;
 
-	// std::cout<<"1"<<std::endl;
+	// CLUSTERS
+	std::vector<node_data> graph(v_size);
+	g.graph = graph;
 
 	// CLUSTERS
 	std::vector<std::unordered_set<int>> clusters(k_size);
 	g.clusters = clusters;
-	// std::cout<<"1"<<std::endl;
 
 	// BFS_Vi
 	std::vector<std::vector<std::pair<int, int>>> bfs_vi_init(v_size);
 	g.bfs_vi = bfs_vi_init;
-	// std::cout<<"1"<<std::endl;
 
 	// l(v, v');
 	lvv_data lvv_data_init;
@@ -132,11 +132,9 @@ int main(int argc, char *argv[])
 	std::vector<std::pair<uint64_t, uint64_t>> uint_pair_init(v_size, std::make_pair (INFINITE, INFINITE));
 	std::vector<std::vector<std::pair<uint64_t, uint64_t>>> PREV(k_subset_size, uint_pair_init);
 
-	// std::cout<<"1"<<std::endl;
 	// η(S);
 	std::vector<int> eta(k_subset_size);
 
-	// std::cout<<"5"<<std::endl;
 	for (int i = 0; i < m_size; i++)
 	{
 		int v, u;
@@ -146,7 +144,6 @@ int main(int argc, char *argv[])
 		g.graph[u].adj.insert(v);
 	}
 
-	// std::cout<<"6"<<std::endl;
 	for (int i = 0; i < v_size; i++)
 	{
 		int v, cluster;
@@ -160,7 +157,6 @@ int main(int argc, char *argv[])
 
 		eta[1 << cluster]++;
 	}
-	// std::cout<<"7"<<std::endl;
 
 	// Calculate BFS of Vi for each node of Vi
 	for (uint64_t i = 1, j = 0; i < k_subset_size; i <<= 1, j++)
@@ -170,26 +166,11 @@ int main(int argc, char *argv[])
 			OPT[i][v] = BFS_Vi(g, v);
 		}
 	}
-	// std::cout<<"8"<<std::endl;
-
-	// Debug print
-	// LOG("### l(v, v') ###\n");
-	// for (int i = 0; i < v_size; i++)
-	// {
-	// 	for (int j = 0; j < v_size; j++)
-	// 	{
-	// 		if (g.lvv[i][j].distance != INFINITE)
-	// 		{
-	// 			LOG("l(%d, %d) = %d\n", i, j, (int)g.lvv[i][j].distance);
-	// 		}
-	// 	}
-	// }
 
 	std::vector<bool> s_flags(k_size);
 	std::vector<int> s_vec;
 	int number_of_clusters = 0;
 
-	// std::cout<<"9"<<std::endl;
 	// For each subset S in V
 	for (uint64_t s_binary = 0; s_binary < k_subset_size; s_binary++)
 	{
@@ -200,39 +181,30 @@ int main(int argc, char *argv[])
 		// OPT of S with |S|=1 already calculated
 		if (number_of_clusters > 1)
 		{
-			// For each node v
-			for (auto map_pair : g.graph)
-			{
-				int v_node = map_pair.first;
-				uint64_t min = INFINITE;
-
-				// Support vector of S
-				std::vector<int> s_vec_tmp(s_vec);
-
-				// Finds the cluster of the v_node in S
-				std::vector<int>::iterator it = std::lower_bound(s_vec_tmp.begin(), s_vec_tmp.end(), g.graph[v_node].cluster, std::greater<int>());
-
-				// If the cluster of v_node is not in S => OPT[S][v_node] = INF
-				if (it != s_vec_tmp.end())
-				{
-					// Removes the cluster of v_node from S
-					if (*it == g.graph[v_node].cluster)
-					{
-						s_vec_tmp.erase(it);
-					}
-
+			for(int r : s_vec){
+				for(int v_node : g.clusters[r]){
+					uint64_t min = INFINITE;
+					
 					std::vector<int> s1_vec;
-					std::vector<bool> s1_flags(s_vec_tmp.size());
-					uint64_t s1_subset_size = static_cast<uint64_t>(1) << s_vec_tmp.size();
+					std::vector<bool> s1_flags(s_vec.size());
+					uint64_t s1_subset_size = static_cast<uint64_t>(1) << s1_flags.size();
 
 					// Vars init
-					s1_flags[0] = 1;
-					s1_vec.push_back(s_vec_tmp[0]);
-					uint64_t s1_eta = g.clusters[s_vec_tmp[0]].size();
-					uint64_t s1_binary = static_cast<uint64_t>(1) << s_vec_tmp[0];
+					uint64_t s1_eta = g.clusters[s_vec[0]].size();
+					uint64_t s1_binary = static_cast<uint64_t>(1) << s_vec[0];
+
+					if(s_vec[0] == r){
+						s1_flags[1] = 1;
+						s1_vec.push_back(s_vec[1]);
+						s1_eta = g.clusters[s_vec[1]].size();
+						s1_binary = static_cast<uint64_t>(1) << s_vec[1];
+					}else{
+						s1_flags[0] = 1;
+						s1_vec.push_back(s_vec[0]);
+					}
 
 					// For each S' in S
-					for (uint64_t i = 1; i < s1_subset_size; i++)
+					for (uint64_t i = 1 + (s_vec[0] == r); i < s1_subset_size; i++)
 					{
 						int j = 0;
 						uint64_t s_not_s1_binary = s_binary & ~s1_binary;
@@ -259,26 +231,36 @@ int main(int argc, char *argv[])
 							}
 						}
 
-						while (s1_flags[j])
-						{
-							s1_flags[j] = false;
-							s1_vec.pop_back();
-							s1_eta -= g.clusters[s_vec_tmp[j]].size();
-							s1_binary &= ~(1 << s_vec_tmp[j]);
-							j++;
-						}
+						bool isDone = false;
+						do{
+							while (s1_flags[j])
+							{
+								s1_flags[j] = false;
+								
+								if(s_vec[j] != r){
+									s1_vec.pop_back();
+									s1_eta -= g.clusters[s_vec[j]].size();
+									s1_binary &= ~(1 << s_vec[j]);
+								}
 
-						if (j < s1_flags.size())
-						{
-							s1_flags[j] = true;
-							s1_vec.push_back(s_vec_tmp[j]);
-							s1_eta += g.clusters[s_vec_tmp[j]].size();
-							s1_binary |= 1 << s_vec_tmp[j];
-						}
+								j++;
+							}
+
+							if (j < s1_flags.size())
+							{
+								s1_flags[j] = true;
+
+								if(s_vec[j] != r){
+									s1_vec.push_back(s_vec[j]);
+									s1_eta += g.clusters[s_vec[j]].size();
+									s1_binary |= 1 << s_vec[j];
+								}
+							}else{ isDone = true; }
+						}while(s_vec[j] == r && !isDone);
 					}
-				}
 
-				OPT[s_binary][v_node] = min;
+					OPT[s_binary][v_node] = min;
+				}
 			}
 		}
 
@@ -303,7 +285,7 @@ int main(int argc, char *argv[])
 	// 	std::cout <<i<<"\t";
 	// }
 	// std::cout<< std::endl;
-	// for (int i = 0; i < k_subset_size; i++)
+	// for (uint64_t i = 0; i < k_subset_size; i++)
 	// {
 	// 	std::cout <<std::bitset<7>(i)<<" |\t";
 	// 	for (int j = 0; j < v_size; j++)

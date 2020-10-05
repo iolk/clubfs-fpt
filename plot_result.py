@@ -24,13 +24,11 @@ for i in range(1, m+1):
 	e_to = in_body[i].split()[1]
 	G.add_edge(e_from, e_to)
 
-# labels = sc.labels_
-
 cluster_labels = []
 nx.set_node_attributes(G, cluster_labels, 'cluster_label')
 
-clustered_bfs = []
-nx.set_edge_attributes(G, clustered_bfs, 'clustered_bfs')
+clubfs = []
+nx.set_edge_attributes(G, clubfs, 'clubfs')
 
 for i, node in enumerate(G.nodes):
 	G.nodes[node]['cluster_label'] = int(in_body[1+m+int(node)].split()[1])
@@ -38,7 +36,7 @@ for i, node in enumerate(G.nodes):
 for i, link in enumerate(res_body):
 	u = link.split()[0]
 	v = link.split()[1]
-	G.edges[u,v]['clustered_bfs'] = 1
+	G.edges[u,v]['clubfs'] = 1
 
 # Gephi rappresentation
 nx.write_gexf(G, 'plot.gexf')

@@ -3,6 +3,9 @@ import networkx as nx
 from cdlib import algorithms
 from sklearn.cluster import SpectralClustering
 import argparse
+import random
+import collections
+import matplotlib.pyplot as plt
 
 def edge_to_remove(graph):
 	G_dict = nx.edge_betweenness_centrality(graph)
@@ -46,9 +49,11 @@ parser.add_argument('--file-path', action='store', type=str, help='')
 parser.add_argument('-t1', action='store', type=float, help='Parameter for LFR benchmark')
 parser.add_argument('-t2', action='store', type=float, help='Parameter for LFR benchmark')
 parser.add_argument('-mu', action='store', type=float, help='Parameter for LFR benchmark')
-parser.add_argument('-avg_degree', action='store', type=float, help='Parameter for LFR benchmark')
-parser.add_argument('-min_degree', action='store', type=float, help='Parameter for LFR benchmark')
-parser.add_argument('-min_community', action='store', type=float, help='Parameter for LFR benchmark')
+parser.add_argument('-ad','--avg_degree', action='store', type=float, help='Parameter for LFR benchmark')
+parser.add_argument('-mind','--min_degree', action='store', type=float, help='Parameter for LFR benchmark')
+parser.add_argument('-maxd','--max_degree', action='store', type=float, help='Parameter for LFR benchmark')
+parser.add_argument('-minc','--min_community', action='store', type=float, help='Parameter for LFR benchmark')
+parser.add_argument('-maxc','--max_community', action='store', type=float, help='Parameter for LFR benchmark')
 
 
 parser.add_argument('-c', '--communities', action='store', nargs='+', type=int, help='Parameter for Partition Graph, list of cardinalities of communities')
@@ -63,23 +68,38 @@ parser.add_argument('-k', action='store', type=int, help='Number of cluster')
 args = parser.parse_args()
 
 # Argument check
-if args.generation[0] == 'lfr-benchmark' and (args.n is None or args.t1 is None or args.t2 is None or args.mu is None or args.min_community is None or (args.avg_degree is None and args.min_degree is None)):
-	parser.error("Partition Graph requires --communities, -p_in and -p_out.")
+# if args.generation[0] == 'lfr-benchmark' and (args.n is None or args.t1 is None or args.t2 is None or args.mu is None or args.min_community is None or (args.avg_degree is None and args.min_degree is None)):
+# 	parser.error("Partition Graph requires --communities, -p_in and -p_out.")
 
-if args.generation[0] == 'partition' and (args.communities is None or args.p_in is None or args.p_out is None or args.k is None):
-	parser.error("Partition Graph requires --communities, -p_in and -p_out.")
+if args.generation[0] == 'partition' and (args.p_in is None or args.p_out is None or args.k is None):
+	parser.error("Partition Graph requires -p_in and -p_out.")
 
 if args.generation[0] == 'internet-as' and (args.n is None or args.k is None):
 	parser.error("Internet AS Graph requires -n.")
 
-SEED = 14957 if args.seed is None else args.seed
-np.random.seed(SEED)
+if args.seed is None: 
+	np.random.seed()
+	random.seed()
+else:
+	np.random.seed(args.seed)
+	random.seed(args.seed)
 
 cluster_number = 1
 
 # LFR Benchmark Graph
 if args.generation[0] == 'lfr-benchmark': 
-	G = nx.LFR_benchmark_graph(args.n, args.t1, args.t2 , args.mu, average_degree=args.avg_degree, min_community=args.min_community, seed=SEED)
+	G = nx.LFR_benchmark_graph(
+		args.n, 
+		args.t1, 
+		args.t2 , 
+		args.mu, 
+		min_degree=args.min_degree, 
+		max_degree=args.max_degree, 
+		average_degree=args.avg_degree,
+		min_community=args.min_community, 
+		max_community=args.max_community, 
+		seed=args.seed
+	)
 
 	H = G.__class__()
 	H.add_nodes_from(G)
@@ -107,7 +127,12 @@ if args.generation[0] == 'internet-as':
 
 # Random Partition Graph
 if args.generation[0] == 'partition': 
-	G = nx.random_partition_graph(args.communities, args.p_in, args.p_out, seed=SEED)
+	communities = [0]*args.k if args.communities is None else args.communities
+	if args.communities is None: 
+		for i in range(0,args.k):
+			communities[i] = random.randint(50, 200)
+	
+	G = nx.random_partition_graph(communities, args.p_in, args.p_out, seed=args.seed)
 
 if args.generation[0] == 'file': 
 	G = nx.Graph()
@@ -122,6 +147,35 @@ if args.generation[0] == 'file':
 		v = link.split()[1]
 		G.add_edge(u, v)
 
+
+spl = nx.average_shortest_path_length(G)
+cost = (2*len(G.edges)) / (len(G.nodes)*(len(G.nodes)-1))
+clu = nx.average_clustering(G)
+print('Avg. Lunghezza SP: %f' % spl)
+print('Costo rete: %f' %  cost)
+print('Clustering coefficient: %f' % clu )
+
+degree_sequence = sorted([d for n, d in G.degree()], reverse=True)  # degree sequence
+degreeCount = collections.Counter(degree_sequence)
+deg, cnt = zip(*degreeCount.items())
+
+fig, ax = plt.subplots()
+plt.bar(deg, cnt, width=0.80, color="b")
+
+plt.title("Degree Histogram")
+plt.ylabel("Count")
+plt.xlabel("Degree")
+ax.set_xticks([d + 0.4 for d in deg])
+ax.set_xticklabels(deg)
+
+# draw graph in inset
+plt.axes([0.4, 0.4, 0.5, 0.5])
+Gcc = G.subgraph(sorted(nx.connected_components(G), key=len, reverse=True)[0])
+pos = nx.spring_layout(G)
+plt.axis("off")
+nx.draw_networkx_nodes(G, pos, node_size=20)
+nx.draw_networkx_edges(G, pos, alpha=0.4)
+plt.show()
 
 num_of_clusters = args.k if args.generation[0] != 'lfr-benchmark' else cluster_number-1
 
