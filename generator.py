@@ -145,7 +145,14 @@ if args.generation[0] == 'file':
 	for i, link in enumerate(res_body):
 		u = link.split()[0]
 		v = link.split()[1]
+		# u=int(u) -1 
+		# v=int(v) -1
 		G.add_edge(u, v)
+
+
+if not nx.is_connected(G):
+	largest_cc = max(nx.connected_components(G), key=len)
+	G = G.subgraph(largest_cc).copy()
 
 
 spl = nx.average_shortest_path_length(G)
@@ -179,11 +186,8 @@ plt.show()
 
 num_of_clusters = args.k if args.generation[0] != 'lfr-benchmark' else cluster_number-1
 
-if args.generation[0] != 'lfr-benchmark':
-	if not nx.is_connected(G):
-		largest_cc = max(nx.connected_components(G), key=len)
-		G = G.subgraph(largest_cc).copy()
 
+if args.generation[0] != 'lfr-benchmark':
 	adj_mat = nx.to_numpy_matrix(G)
 
 	# SpectralClustering
