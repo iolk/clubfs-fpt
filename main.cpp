@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
 		int v, cluster;
 		std::cin >> v >> cluster;
 
-		// Clusters indexes go from [0, k-1]
+		// L'indice dei cluster va da [0, k-1]
 		cluster--;
 
 		g.graph[v].cluster = cluster;
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 		eta[1 << cluster]++;
 	}
 
-	// Calculate BFS of Vi for each node of Vi
+	// Calcolo di tutti i casi base di OPT, ovvero i BFS di Vi
 	for (uint64_t i = 1, j = 0; i < k_subset_size; i <<= 1, j++)
 	{
 		for (int v : g.clusters[j])
@@ -167,32 +167,49 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	// Vettore caratteristico di S
 	std::vector<bool> s_flags(k_size);
+
+	// Vettore degli indici di S (ordinato in modo non-decrescente)
 	std::vector<int> s_vec;
+	
 	int number_of_clusters = 0;
 
-	// For each subset S in V
+	// Per ogni sottoinsieme S dell'insieme dei cluster
 	for (uint64_t s_binary = 0; s_binary < k_subset_size; s_binary++)
 	{
 		int ith_cluster = 0;
 
-		LOG("S: %d\n", s_binary);
+		// LOG("S: %d\n", s_binary);
 
-		// OPT of S with |S|=1 already calculated
+		// Gli OPT di S con cardinalità 1 sono già stati calcolati
 		if (number_of_clusters > 1)
 		{
-			for(int r : s_vec){
-				for(int v_node : g.clusters[r]){
+			// Per ogni nodo in ogni cluster di S
+			for(int r : s_vec)
+			{
+				for(int v_node : g.clusters[r])
+				{
 					uint64_t min = INFINITE;
 					
-					std::vector<int> s1_vec;
+					// Vettore caratteristico di S'
 					std::vector<bool> s1_flags(s_vec.size());
+					
+					// Vettore degli indici di S' (ordinato in modo non-decrescente)
+					std::vector<int> s1_vec;
 					uint64_t s1_subset_size = static_cast<uint64_t>(1) << s1_flags.size();
 
-					// Vars init
+					/* Inizializzazione delle variabili
+					 * Per risolvere il fattore k bisognava gestire S' da S escludendo 
+					 * il cluster r del nodo v. E' fondamentale che in S' non entri r 
+					 * per il calcolo di OPT.
+					 * A questo proposito nelle versioni precedenti veniva creato un vettore
+					 * d'appogio e poi rimosso r da esso
+					 */
 					uint64_t s1_eta = g.clusters[s_vec[0]].size();
 					uint64_t s1_binary = static_cast<uint64_t>(1) << s_vec[0];
 
+					// Viene gestito il caso in cui r è il primo cluster di S
 					if(s_vec[0] == r){
 						s1_flags[1] = 1;
 						s1_vec.push_back(s_vec[1]);
@@ -203,18 +220,20 @@ int main(int argc, char *argv[])
 						s1_vec.push_back(s_vec[0]);
 					}
 
-					// For each S' in S
+					// Per ogni S' in S
 					for (uint64_t i = 1 + (s_vec[0] == r); i < s1_subset_size; i++)
 					{
 						int j = 0;
 						uint64_t s_not_s1_binary = s_binary & ~s1_binary;
 
-						// For each v in C | C subset of S'
+						// Per ogni nodo in ogni cluster di S'
 						for (int cluster : s1_vec)
 						{
 							for (int v1 : g.clusters[cluster])
 							{
 								uint64_t tmp = INFINITE;
+
+								// Calcolo di OPT
 								if (g.lvv[v_node][v1].distance != INFINITE &&
 									OPT[s1_binary][v1] != INFINITE &&
 									OPT[s_not_s1_binary][v_node] != INFINITE)
@@ -225,12 +244,23 @@ int main(int argc, char *argv[])
 									if (tmp < min)
 									{
 										min = tmp;
+
+										// Ricostruzione della soluzione
 										PREV[s_binary][v_node] = std::make_pair(s1_binary, v1);
 									}
 								}
 							}
 						}
 
+						/* Gestione del vettore caratteristico di S'
+						 * Qui vengono gestiti i casi in cui viene processato il cluster r del nodo
+						 * Fondamentalmente se viene incontrato non deve essere inserito e le variabili
+						 * di S' non devono essere modificate però il vettore caratteristico deve essere
+						 * aggiornato "simulando" che r sia stato valutato quindi i cicli in cui r 
+						 * s1_flags[r] è true vengono saltati attraverso il do while
+						 * La variabile isDone è utilizzata nel caso in cui r è valutato ma sono già stati
+						 * valutati tutti i sotto insiemi
+						 */
 						bool isDone = false;
 						do{
 							while (s1_flags[j])
@@ -303,6 +333,7 @@ int main(int argc, char *argv[])
 	// Print the cost of CLUBFS from start_node
 	// std::cout << OPT[k_subset_size - 1][start_node] << std::endl;
 	
+	// Output della soluzione
 	for(auto link: g.bfs_vi[start_node]){
 		std::cout << link.first << " " << link.second << std::endl;
 	}
