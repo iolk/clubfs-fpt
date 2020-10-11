@@ -9,6 +9,7 @@
 #include <list>
 #include <cstdint>
 #include <functional>
+#include <chrono>
 
 #define INFINITE 184467440737095516
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
@@ -85,6 +86,7 @@ int BFS_Vi(ClusterGraph &g, int s)
 
 int main(int argc, char *argv[])
 {
+	auto start_with_io = std::chrono::high_resolution_clock::now();
 	freopen("results.out", "w", stdout);
 	freopen("debug.txt", "w", stderr);
 	freopen(argv[1], "r", stdin);
@@ -135,6 +137,8 @@ int main(int argc, char *argv[])
 	// η(S);
 	std::vector<int> eta(k_subset_size);
 
+	std::cout<<"dwqdqwdqw"<<std::endl;
+
 	for (int i = 0; i < m_size; i++)
 	{
 		int v, u;
@@ -157,7 +161,10 @@ int main(int argc, char *argv[])
 
 		eta[1 << cluster]++;
 	}
+	
+	auto start_without_io = std::chrono::high_resolution_clock::now();
 
+	std::cout<<"dwqdqwdqw"<<std::endl;
 	// Calcolo di tutti i casi base di OPT, ovvero i BFS di Vi
 	for (uint64_t i = 1, j = 0; i < k_subset_size; i <<= 1, j++)
 	{
@@ -175,6 +182,7 @@ int main(int argc, char *argv[])
 	
 	int number_of_clusters = 0;
 
+	std::cout<<"dwqdqwdqw"<<std::endl;
 	// Per ogni sottoinsieme S dell'insieme dei cluster
 	for (uint64_t s_binary = 0; s_binary < k_subset_size; s_binary++)
 	{
@@ -333,12 +341,19 @@ int main(int argc, char *argv[])
 	// Print the cost of CLUBFS from start_node
 	// std::cout << OPT[k_subset_size - 1][start_node] << std::endl;
 	
+	auto finish_without_io = std::chrono::high_resolution_clock::now();
+
 	// Output della soluzione
 	for(auto link: g.bfs_vi[start_node]){
 		std::cout << link.first << " " << link.second << std::endl;
 	}
 	print_solution(start_node, k_subset_size - 1, PREV, g);
-	
+
+	auto finish_with_io = std::chrono::high_resolution_clock::now();
+
+	auto duration_with_io = std::chrono::duration_cast<std::chrono::microseconds>( finish_with_io - start_with_io ).count();
+	auto duration_without_io = std::chrono::duration_cast<std::chrono::microseconds>( finish_without_io - start_without_io ).count();
+	std::cout << std::endl << duration_with_io << " & "<< duration_without_io;
 }
 
 void print_solution(uint64_t node, uint64_t subset, std::vector<std::vector<std::pair<uint64_t, uint64_t>>> PREV, ClusterGraph g){

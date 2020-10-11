@@ -39,7 +39,7 @@ parser.add_argument('--seed', action='store', type=int)
 parser.add_argument('file_name', metavar='file_name', type=str, help='Name of the file')
 
 # Clustering options
-parser.add_argument('-clu', '--clustering', action='store', nargs=1, type=str, default=['spectral'], choices=['louvain','infomap','spectral', 'girvan-newman'], help='Clustering algorithm (default: spectral)')
+parser.add_argument('-clu', '--clustering', action='store', nargs=1, type=str, default=['spectral'], choices=['louvain','spectral', 'girvan-newman'], help='Clustering algorithm (default: spectral)')
 
 # Graph generator options
 parser.add_argument('-gen', '--generation', action='store', nargs=1, type=str, default=['lfr-benchmark'], choices=['file','lfr-benchmark','partition', 'internet-as'], help='Generation algorithm (default: partition)')
@@ -59,11 +59,11 @@ parser.add_argument('-maxc','--max_community', action='store', type=float, help=
 parser.add_argument('-c', '--communities', action='store', nargs='+', type=int, help='Parameter for Partition Graph, list of cardinalities of communities')
 parser.add_argument('-p_in', action='store', type=float, help='Parameter for Partition Graph, probability of edges in the community')
 parser.add_argument('-p_out', action='store', type=float, help='Parameter for Partition Graph, probability of edges between community')
+parser.add_argument('-c_min', action='store', type=float, help='Parameter for Partition Graph, probability of edges in the community')
+parser.add_argument('-c_max', action='store', type=float, help='Parameter for Partition Graph, probability of edges between community')
 
 parser.add_argument('-n', action='store', type=int, help='Parameter for Internet AS Graph, Number of nodes')
 parser.add_argument('-k', action='store', type=int, help='Number of cluster')
-
-# parser.add_argument('-er', '--erdos-renyi', action='store_true', help='Generates a random Erdos Renyi graph')
 
 args = parser.parse_args()
 
@@ -74,7 +74,7 @@ args = parser.parse_args()
 if args.generation[0] == 'partition' and (args.p_in is None or args.p_out is None or args.k is None):
 	parser.error("Partition Graph requires -p_in and -p_out.")
 
-if args.generation[0] == 'internet-as' and (args.n is None or args.k is None):
+if args.generation[0] == 'internet-as' and args.n is None:
 	parser.error("Internet AS Graph requires -n.")
 
 if args.seed is None: 
@@ -123,14 +123,17 @@ if args.generation[0] == 'lfr-benchmark':
 
 # Random Internet AS Graph
 if args.generation[0] == 'internet-as': 
-	G = nx.random_internet_as_graph(args.n)
+	G = nx.random_internet_as_graph(args.n*5)
+	for node in range(0,args.n*5):
+		if G.nodes[node]['type'] == 'C':
+			G.remove_node(node)
 
 # Random Partition Graph
 if args.generation[0] == 'partition': 
 	communities = [0]*args.k if args.communities is None else args.communities
 	if args.communities is None: 
 		for i in range(0,args.k):
-			communities[i] = random.randint(50, 200)
+			communities[i] = random.randint(args.c_min, args.c_max)
 	
 	G = nx.random_partition_graph(communities, args.p_in, args.p_out, seed=args.seed)
 
@@ -149,57 +152,21 @@ if args.generation[0] == 'file':
 		# v=int(v) -1
 		G.add_edge(u, v)
 
-
 if not nx.is_connected(G):
 	largest_cc = max(nx.connected_components(G), key=len)
 	G = G.subgraph(largest_cc).copy()
 
-
-spl = nx.average_shortest_path_length(G)
-cost = (2*len(G.edges)) / (len(G.nodes)*(len(G.nodes)-1))
-clu = nx.average_clustering(G)
-print('Avg. Lunghezza SP: %f' % spl)
-print('Costo rete: %f' %  cost)
-print('Clustering coefficient: %f' % clu )
-
-degree_sequence = sorted([d for n, d in G.degree()], reverse=True)  # degree sequence
-degreeCount = collections.Counter(degree_sequence)
-deg, cnt = zip(*degreeCount.items())
-
-fig, ax = plt.subplots()
-plt.bar(deg, cnt, width=0.80, color="b")
-
-plt.title("Degree Histogram")
-plt.ylabel("Count")
-plt.xlabel("Degree")
-ax.set_xticks([d + 0.4 for d in deg])
-ax.set_xticklabels(deg)
-
-# draw graph in inset
-plt.axes([0.4, 0.4, 0.5, 0.5])
-Gcc = G.subgraph(sorted(nx.connected_components(G), key=len, reverse=True)[0])
-pos = nx.spring_layout(G)
-plt.axis("off")
-nx.draw_networkx_nodes(G, pos, node_size=20)
-nx.draw_networkx_edges(G, pos, alpha=0.4)
-plt.show()
+# spl = nx.average_shortest_path_length(G)
+# cost = (2*len(G.edges)) / (len(G.nodes)*(len(G.nodes)-1))
+# clu = nx.average_clustering(G)
+# print(spl,'&',clu,'&',cost)
 
 num_of_clusters = args.k if args.generation[0] != 'lfr-benchmark' else cluster_number-1
 
 
 if args.generation[0] != 'lfr-benchmark':
 	adj_mat = nx.to_numpy_matrix(G)
-
-	# SpectralClustering
-	if args.clustering[0] == 'infomap':
-		im = algorithms.infomap(G)
-		print(im)
-
-	if args.clustering[0] == 'louvain':
-		im = algorithms.louvain(G)
-		print(im.to_node_community_map())
-
-
+		
 	# SpectralClustering
 	if args.clustering[0] == 'spectral':
 		sc = SpectralClustering(num_of_clusters, affinity='precomputed', n_init=100, assign_labels='discretize')
@@ -225,16 +192,11 @@ if args.generation[0] != 'lfr-benchmark':
 			for j, node in enumerate(clust):
 				G.nodes[node]['cluster_label'] = i+1
 
-
-# for (node, nodedata) in G.nodes.items():
-# 	print(node)
-# 	print(nodedata)
-
 # Gephi rappresentation
 nx.write_gexf(G, 'gen_'+args.file_name+'_plot.gexf')
 
 # Algoritm rappresentation
-file = open('testcases/gen_'+ args.file_name+'.in','w')
+file = open('gen_'+ args.file_name+'.in','w')
 
 file.write('%d %d %d\n' % (len(G.nodes), len(G.edges), num_of_clusters))
 
