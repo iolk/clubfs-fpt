@@ -34,6 +34,8 @@ for i, node in enumerate(G.nodes):
 	G.nodes[node]['cluster_label'] = int(in_body[1+m+int(node)].split()[1])
 
 for i, link in enumerate(res_body):
+	if link == "":
+		break
 	u = link.split()[0]
 	v = link.split()[1]
 	G.edges[u,v]['clubfs'] = 1

@@ -137,8 +137,6 @@ int main(int argc, char *argv[])
 	// η(S);
 	std::vector<int> eta(k_subset_size);
 
-	std::cout<<"dwqdqwdqw"<<std::endl;
-
 	for (int i = 0; i < m_size; i++)
 	{
 		int v, u;
@@ -164,7 +162,6 @@ int main(int argc, char *argv[])
 	
 	auto start_without_io = std::chrono::high_resolution_clock::now();
 
-	std::cout<<"dwqdqwdqw"<<std::endl;
 	// Calcolo di tutti i casi base di OPT, ovvero i BFS di Vi
 	for (uint64_t i = 1, j = 0; i < k_subset_size; i <<= 1, j++)
 	{
@@ -182,7 +179,6 @@ int main(int argc, char *argv[])
 	
 	int number_of_clusters = 0;
 
-	std::cout<<"dwqdqwdqw"<<std::endl;
 	// Per ogni sottoinsieme S dell'insieme dei cluster
 	for (uint64_t s_binary = 0; s_binary < k_subset_size; s_binary++)
 	{
