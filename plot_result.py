@@ -8,7 +8,7 @@ with open(sys.argv[1],'r') as f:
 	in_body.pop()
 	f.close()
 
-with open('results.out','r') as f:
+with open(sys.argv[2],'r') as f:
 	res_body = f.read().split('\n')
 	res_body.pop()
 	f.close()
@@ -20,8 +20,8 @@ k = int(in_body[0].split()[2])
 G = nx.Graph()
 
 for i in range(1, m+1):
-	e_from = in_body[i].split()[0]
-	e_to = in_body[i].split()[1]
+	e_from = int(in_body[i].split()[0])
+	e_to = int(in_body[i].split()[1])
 	G.add_edge(e_from, e_to)
 
 cluster_labels = []
@@ -36,9 +36,12 @@ for i, node in enumerate(G.nodes):
 for i, link in enumerate(res_body):
 	if link == "":
 		break
-	u = link.split()[0]
-	v = link.split()[1]
-	G.edges[u,v]['clubfs'] = 1
+	u = int(link.split()[0])
+	v = int(link.split()[1])
+	try:
+		G.edges[u,v]['clubfs'] = 1
+	except:
+		print("ERR:",u,v,sys.argv[1],sys.argv[2])
 
 # Gephi rappresentation
-nx.write_gexf(G, 'plot.gexf')
+nx.write_gexf(G, sys.argv[3])

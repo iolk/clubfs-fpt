@@ -87,7 +87,7 @@ int BFS_Vi(ClusterGraph &g, int s)
 int main(int argc, char *argv[])
 {
 	auto start_with_io = std::chrono::high_resolution_clock::now();
-	freopen("results.out", "w", stdout);
+	freopen(argv[2], "w", stdout);
 	freopen("debug.txt", "w", stderr);
 	freopen(argv[1], "r", stdin);
 	std::ios_base::sync_with_stdio(false);
