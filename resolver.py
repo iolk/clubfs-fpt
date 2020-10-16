@@ -19,10 +19,8 @@ def resolve_testcase(filename):
 	
 	start_time = time.time()
 	os.system(executor+' '+dir_testcases+filename+' '+dir_results+name+'.out')
-	os.system('plot_result.py '+dir_testcases+filename+' '+dir_results+name+'.out'+' '+dir_results+'plots/'+name+'.gexf')
+	os.system('python3 plot_result.py '+dir_testcases+filename+' '+dir_results+name+'.out'+' '+dir_results+'plots/'+name+'.gexf')
 
-	# os.replace('results.out', dir_results+name+'.out')
-	# os.replace('plot.gexf', dir_results+'plots/'+name+'.gexf')
 	end_time = time.time()
 	return executor+' '+dir_testcases+filename+"--- "+str(end_time - start_time)+" seconds ---"
 
